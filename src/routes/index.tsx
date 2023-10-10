@@ -21,7 +21,7 @@ export default component$(() => {
     );
     const res = await fetch(apiUrl);
     const data = await res.json();
-    events.value = !!events.value ? [...events.value, ...data[0]] : data[0];
+    events.value = events.value ? [...events.value, ...data[0]] : data[0];
     metadata.value = data[1];
   });
 
