@@ -1,112 +1,74 @@
-import { component$ } from "@builder.io/qwik";
-import type { DocumentHead } from "@builder.io/qwik-city";
+import { component$, useSignal, useTask$ } from "@builder.io/qwik";
+import { type DocumentHead } from "@builder.io/qwik-city";
+import styles from "./events/events.module.css";
+import { EventItem, Metadata } from "~/types";
+import { Event } from "~/components/event";
 
-import Counter from "~/components/starter/counter/counter";
-import Hero from "~/components/starter/hero/hero";
-import Infobox from "~/components/starter/infobox/infobox";
-import Starter from "~/components/starter/next-steps/next-steps";
+type ORDER_BY = "newestFirst" | "startDate";
+
+const API_URL = "https://dev.events/api/events/search";
 
 export default component$(() => {
+  const events = useSignal<EventItem[]>([]);
+  const metadata = useSignal<Metadata>();
+
+  const orderBy = useSignal<ORDER_BY>("startDate");
+  const start = useSignal<number>(0);
+
+  useTask$(async ({ track }) => {
+    const apiUrl = track(
+      () => `${API_URL}?sorting=${orderBy.value}&x=true&start=${start.value}`
+    );
+    const res = await fetch(apiUrl);
+    const data = await res.json();
+    events.value = !!events.value ? [...events.value, ...data[0]] : data[0];
+    metadata.value = data[1];
+  });
+
   return (
     <>
-      <Hero />
-      <Starter />
-
-      <div role="presentation" class="ellipsis"></div>
-      <div role="presentation" class="ellipsis ellipsis-purple"></div>
-
-      <div class="container container-center container-spacing-xl">
-        <h3>
-          You can <span class="highlight">count</span>
-          <br /> on me
-        </h3>
-        <Counter />
+      <div class="container container-center">
+        <h1>
+          <span class="highlight">Events</span> List
+        </h1>
+        <select
+          name="orderBy"
+          id="order-by"
+          value={orderBy.value}
+          onChange$={(e) => {
+            start.value = 0;
+            events.value = [];
+            orderBy.value = e.target.value as ORDER_BY;
+          }}
+        >
+          <option value="startDate">Start date</option>
+          <option value="newestFirst">Newest first</option>
+        </select>
       </div>
 
-      <div class="container container-flex">
-        <Infobox>
-          <div q:slot="title" class="icon icon-cli">
-            CLI Commands
+      <div role="presentation" class="ellipsis"></div>
+
+      <div class="container container-center">
+        {events.value.length === 0 ? (
+          <span class={styles.empty}>No items found</span>
+        ) : (
+          <div class={styles.list}>
+            {events.value.map((event, index) => (
+              <Event key={`items-${index}`} event={event} />
+            ))}
+
+            <div>
+              <button onClick$={() => start.value++} class={styles.button}>
+                Load more
+              </button>
+            </div>
           </div>
-          <>
-            <p>
-              <code>npm run dev</code>
-              <br />
-              Starts the development server and watches for changes
-            </p>
-            <p>
-              <code>npm run preview</code>
-              <br />
-              Creates production build and starts a server to preview it
-            </p>
-            <p>
-              <code>npm run build</code>
-              <br />
-              Creates production build
-            </p>
-            <p>
-              <code>npm run qwik add</code>
-              <br />
-              Runs the qwik CLI to add integrations
-            </p>
-          </>
-        </Infobox>
-
-        <div>
-          <Infobox>
-            <div q:slot="title" class="icon icon-apps">
-              Example Apps
-            </div>
-            <p>
-              Have a look at the <a href="/demo/flower">Flower App</a> or the{" "}
-              <a href="/demo/todolist">Todo App</a>.
-            </p>
-          </Infobox>
-
-          <Infobox>
-            <div q:slot="title" class="icon icon-community">
-              Community
-            </div>
-            <ul>
-              <li>
-                <span>Questions or just want to say hi? </span>
-                <a href="https://qwik.builder.io/chat" target="_blank">
-                  Chat on discord!
-                </a>
-              </li>
-              <li>
-                <span>Follow </span>
-                <a href="https://twitter.com/QwikDev" target="_blank">
-                  @QwikDev
-                </a>
-                <span> on Twitter</span>
-              </li>
-              <li>
-                <span>Open issues and contribute on </span>
-                <a href="https://github.com/BuilderIO/qwik" target="_blank">
-                  GitHub
-                </a>
-              </li>
-              <li>
-                <span>Watch </span>
-                <a href="https://qwik.builder.io/media/" target="_blank">
-                  Presentations, Podcasts, Videos, etc.
-                </a>
-              </li>
-            </ul>
-          </Infobox>
-        </div>
+        )}
       </div>
     </>
   );
 });
 
 export const head: DocumentHead = {
-  title: "Welcome to Qwik",
-  meta: [
-    {
-      name: "description",
-      content: "Qwik site description",
-    },
-  ],
+  title: "Qwik DevEvents List",
 };

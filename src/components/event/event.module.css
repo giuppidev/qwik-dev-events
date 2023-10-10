@@ -1,0 +1,14 @@
+.eventContainer {
+  display: flex;
+  justify-content: center;
+}
+
+.event {
+  display: flex;
+
+  flex-direction: column;
+}
+
+.info {
+  font-size: 0.8rem;
+}
